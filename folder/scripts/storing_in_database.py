@@ -1,12 +1,15 @@
 import MySQLdb
 import pandas as pd
 import datetime
+import string
 from dateutil.parser import parse
 
 
 df = pd.read_csv('text_files/random_tweets/tweets_csv.csv')
-df.index.name= 'row'
-print(df)
+exclude = set(string.punctuation)
+#s = ''.join(ch for ch in s if ch not in exclude)
+#df.set_index('row_id')
+#print(df)
 
  
 db = MySQLdb.connect(host="localhost",  # your host 
@@ -31,38 +34,32 @@ pub_dt = datetime.date(2018, 1, 1)
 insert_query = ""
 
 
-for row in df['row_id']:
-	tweet_id = str(df.loc[row, 'tweet_id'])
-	user_id = str(df.loc[row, 'user_id'])
-	tweet_date = df.loc[row, 'tweet_created_date']
-	tweet_text = df.loc[row, 'text'].encode("utf-8", 'ignore').decode('utf-8','ignore')
-	internal_link = df.loc[row, 'link']#.strip('[\'').strip('\']')
-	article_link = df.loc[row, 'external_link']
-	title = df.loc[row, 'title'].encode("utf-8", 'ignore').decode('utf-8','ignore')
-	author = df.loc[row, 'author']#.strip('[\'').strip('\']')
-	published_date = str(df.loc[row, 'published_date'])
-	likes = str(df.loc[row, 'likes'])
-	shares = str(df.loc[row, 'shares'])
-
+for row in df.iterrows():
+	tweet_id = row[1]['tweet_id']
+	user_id = row[1]['user_id']
+	tweet_date = row[1]['tweet_created_date']
+	tweet_text = ''.join(ch for ch in str(row[1]['text']) if ch not in exclude)
+	internal_link = str(row[1]['link'])
+	article_link = str(row[1]['external_link'])
+	title = ''.join(ch for ch in str(row[1]['title']) if ch not in exclude)
+	author = str(row[1]['author'])
+	published_date = row[1]['published_date']
+	likes = row[1]['likes']
+	shares = row[1]['shares']
 	try:
-		print(tweet_date)
 		dt = parse(tweet_date)
 		tweet_dt = dt.strftime('%Y-%m-%d %H:%M:%S')
 
-		if(published_date != 'nan'):
-			print(published_date)
+		if(str(published_date) != "nan"):
 			pub_dt = datetime.datetime.strptime(published_date[:19], '%Y-%m-%d %H:%M:%S').strftime('%Y-%m-%d %H:%M:%S')
 
-		#print(tweet_dt, pub_dt)
-		#print(insert_query)
 
-		insert_query = "insert into TWEET_DATA values(NULL,"+ str(tweet_id) + ", "+ str(user_id) +", \""+str(tweet_dt)+"\", \""+tweet_text+"\", \""+str(internal_link)+"\", \""+str(article_link)+"\", \""+str(title)+"\", \""+str(author)+"\", \""+str(pub_dt)+"\", "+likes+", "+shares+");"
+		insert_query = "insert into TWEET_DATA values(NULL,"+ str(tweet_id) + ", "+ str(user_id) +", \""+str(tweet_dt)+"\", \""+tweet_text+"\", \""+str(internal_link)+"\", \""+str(article_link)+"\", \""+str(title)+"\", \""+str(author)+"\", \""+str(pub_dt)+"\", "+str(likes)+", "+str(shares)+");"
 		print("Query",insert_query)
 		cur.execute(insert_query)
 		db.commit()
 		print("commit done\n\n")
 	except Exception as e:
-		print("Query",insert_query)
 		print("Exception", e, "\n\n")
 		continue
 
